@@ -18,8 +18,8 @@ class UserController extends Controller
     public function index()
     {
         //get users
-        $users = User::when(request()->q, function($users) {
-            $users = $users->where('name', 'like', '%'. request()->q . '%');
+        $users = User::when(request()->q, function ($users) {
+            $users = $users->where('name', 'like', '%' . request()->q . '%');
         })->with('roles')->latest()->paginate(5);
 
         //return inertia
@@ -58,7 +58,7 @@ class UserController extends Controller
         $this->validate($request, [
             'name'     => 'required',
             'email'    => 'required|unique:users',
-            'password' => 'required|confirmed' 
+            'password' => 'required|confirmed'
         ]);
 
         /**
@@ -67,7 +67,7 @@ class UserController extends Controller
         $user = User::create([
             'name'     => $request->name,
             'email'    => $request->email,
-            'password' => bcrypt($request->password)
+            'password' => $request->password  // Otomatis di-hash oleh mutator
         ]);
 
         //assign roles to user
@@ -107,34 +107,31 @@ class UserController extends Controller
      */
     public function update(Request $request, User $user)
     {
-        // dd($user->id);
         /**
          * validate request
          */
         $this->validate($request, [
             'name'     => 'required',
-            'email'    => 'required|unique:users,email,'.$user->id,
-            'password' => 'nullable|confirmed' 
+            'email'    => 'required|unique:users,email,' . $user->id,
+            'password' => 'nullable|confirmed'
         ]);
 
         /**
          * check password is empty
          */
-        if($request->password == '') {
+        if ($request->password == '') {
 
             $user->update([
                 'name'     => $request->name,
                 'email'    => $request->email
             ]);
-
         } else {
-                
+
             $user->update([
                 'name'     => $request->name,
                 'email'    => $request->email,
-                'password' => bcrypt($request->password)
+                'password' => $request->password  // Otomatis di-hash oleh mutator
             ]);
-            
         }
 
         //assign roles to user

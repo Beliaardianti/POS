@@ -12546,15 +12546,15 @@ html:not([dir="rtl"]) .c-switch-label .c-switch-slider::after {
 .table-primary,
 .table-primary > th,
 .table-primary > td {
-  color: #4f5d73;
-  background-color: #c6c0f5;
+  color: #321fdb;
+  background-color: #321fdb;
 }
 
 .table-primary th,
 .table-primary td,
 .table-primary thead th,
 .table-primary tbody + tbody {
-  border-color: #948bec;
+  border-color: #321fdb;
 }
 
 @media (hover: hover), (-ms-high-contrast: none) {

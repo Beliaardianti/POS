@@ -23,9 +23,9 @@ class UserTableSeeder extends Seeder
 
         // Membuat user admin
         $admin = User::create([
-            'name' => 'Admin User',
+            'name' => 'Ganot Suyoto',
             'email' => 'admin@gmail.com',
-            'password' => bcrypt('password'), // Hash password
+            'password' => 'password', // Hash password
         ]);
 
         // Menetapkan peran admin ke user admin
@@ -33,9 +33,9 @@ class UserTableSeeder extends Seeder
 
         // Membuat user owner
         $owner = User::create([
-            'name' => 'Owner User',
+            'name' => 'Surtiyah',
             'email' => 'owner@gmail.com',
-            'password' => bcrypt('password'),
+            'password' => 'password',
         ]);
 
         // Menetapkan peran owner ke user owner
@@ -43,9 +43,9 @@ class UserTableSeeder extends Seeder
 
         // Membuat user gudang
         $gudang = User::create([
-            'name' => 'Gudang User',
+            'name' => 'Lia',
             'email' => 'gudang@gmail.com',
-            'password' => bcrypt('password'),
+            'password' => 'password',
         ]);
 
         // Menetapkan peran gudang ke user gudang
