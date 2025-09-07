@@ -9,14 +9,14 @@ Route::get('/', function () {
 
 
 //prefix "apps"
-Route::prefix('apps')->group(function() {
+Route::prefix('apps')->group(function () {
 
     //middleware "auth"
     Route::group(['middleware' => ['auth']], function () {
 
         //route dashboard
         Route::get('dashboard', App\Http\Controllers\Apps\DashboardController::class)->name('apps.dashboard');
-        
+
         //route permissions
         Route::get('/permissions', \App\Http\Controllers\Apps\PermissionController::class)->name('apps.permissions.index')
             ->middleware('permission:permissions.index');
@@ -31,11 +31,11 @@ Route::prefix('apps')->group(function() {
 
         //route resource categories
         Route::resource('/categories', \App\Http\Controllers\Apps\CategoryController::class, ['as' => 'apps'])
-            ->middleware('permission:categories.index|categories.create|categories.edit|categories.delete');    
-    
+            ->middleware('permission:categories.index|categories.create|categories.edit|categories.delete');
+
         //route resource products
         Route::resource('/products', \App\Http\Controllers\Apps\ProductController::class, ['as' => 'apps'])
-        ->middleware('permission:products.index|products.create|products.edit|products.delete');
+            ->middleware('permission:products.index|products.create|products.edit|products.delete');
 
         //route resource customers
         Route::resource('/customers', \App\Http\Controllers\Apps\CustomerController::class, ['as' => 'apps'])
@@ -46,7 +46,7 @@ Route::prefix('apps')->group(function() {
 
         //route transaction searchProduct
         Route::post('/transactions/searchProduct', [\App\Http\Controllers\Apps\TransactionController::class, 'searchProduct'])->name('apps.transactions.searchProduct');
-        
+
         //route transaction addToCart
         Route::post('/transactions/addToCart', [\App\Http\Controllers\Apps\TransactionController::class, 'addToCart'])->name('apps.transactions.addToCart');
 
@@ -61,7 +61,7 @@ Route::prefix('apps')->group(function() {
 
         //route sales index
         Route::get('/sales', [\App\Http\Controllers\Apps\SaleController::class, 'index'])->middleware('permission:sales.index')->name('apps.sales.index');
-        
+
         //route sales filter
         Route::get('/sales/filter', [\App\Http\Controllers\Apps\SaleController::class, 'filter'])->name('apps.sales.filter');
 
@@ -82,5 +82,28 @@ Route::prefix('apps')->group(function() {
 
         //route profits pdf
         Route::get('/profits/pdf', [\App\Http\Controllers\Apps\ProfitController::class, 'pdf'])->name('apps.profits.pdf');
+    });
+
+    Route::middleware(['role:owner'])->prefix('approvals')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Apps\ApprovalController::class, 'index'])->name('apps.approvals.index')
+            ->middleware('permission:approvals.view');
+        Route::get('/history', [\App\Http\Controllers\Apps\ApprovalController::class, 'history'])->name('apps.approvals.history')
+            ->middleware('permission:approvals.view');
+        Route::get('/{approval}', [\App\Http\Controllers\Apps\ApprovalController::class, 'show'])->name('apps.approvals.show')
+            ->middleware('permission:approvals.view');
+        Route::post('/{approval}/approve', [\App\Http\Controllers\Apps\ApprovalController::class, 'approve'])->name('apps.approvals.approve')
+            ->middleware('permission:approvals.approve');
+        Route::post('/{approval}/reject', [\App\Http\Controllers\Apps\ApprovalController::class, 'reject'])->name('apps.approvals.reject')
+            ->middleware('permission:approvals.reject');
+    });
+
+    //route approval requests for staff
+    Route::prefix('approval-requests')->group(function () {
+        Route::post('/refund', [\App\Http\Controllers\Apps\ApprovalController::class, 'requestRefund'])->name('apps.approval.request.refund')
+            ->middleware('permission:approvals.request');
+        Route::post('/void', [\App\Http\Controllers\Apps\ApprovalController::class, 'requestVoid'])->name('apps.approval.request.void')
+            ->middleware('permission:approvals.request');
+        Route::post('/discount', [\App\Http\Controllers\Apps\ApprovalController::class, 'requestDiscount'])->name('apps.approval.request.discount')
+            ->middleware('permission:approvals.request');
     });
 });

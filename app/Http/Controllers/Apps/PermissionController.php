@@ -16,12 +16,48 @@ class PermissionController extends Controller
      */
     public function __invoke(Request $request)
     {
-        //get permissions
-        $permissions = Permission::when(request()->q, function($permissions) {
-            $permissions = $permissions->where('name', 'like', '%'. request()->q . '%');
-        })->latest()->paginate(5);
+        // Get search query
+        $search = $request->get('q');
 
-        //return inertia view
+        // Get per_page parameter, default to 15
+        $perPage = $request->get('per_page', 15);
+
+        // Build base query
+        $query = Permission::query();
+
+        // Apply search filter if exists
+        if ($search) {
+            $query->where('name', 'like', '%' . $search . '%');
+        }
+
+        // Order by latest
+        $query->latest();
+
+        // Handle pagination based on per_page parameter
+        if ($perPage === 'all') {
+            // Get all data without pagination
+            $allPermissions = $query->get();
+
+            // Create a custom pagination-like structure for frontend compatibility
+            $permissions = (object) [
+                'data' => $allPermissions,
+                'current_page' => 1,
+                'last_page' => 1,
+                'per_page' => $allPermissions->count(),
+                'total' => $allPermissions->count(),
+                'from' => $allPermissions->count() > 0 ? 1 : null,
+                'to' => $allPermissions->count(),
+                'links' => [] // No pagination links for 'all'
+            ];
+        } else {
+            // Paginate data with specified per_page
+            $permissions = $query->paginate((int)$perPage);
+
+            // Append query parameters to pagination links
+            $permissions->appends($request->only(['q', 'per_page']));
+        }
+
+        // Return inertia view
         return inertia('Apps/Permissions/Index', [
             'permissions' => $permissions
         ]);

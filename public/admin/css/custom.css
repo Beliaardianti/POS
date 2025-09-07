@@ -9,12 +9,12 @@ body {
 }
 
 .border-top-purple {
-    border-top: 5px solid #321fdb !important;
+    border-top: 5px solid #33A1E0 !important;
 }
 
 .btn-primary {
-    background-color: #321fdb !important;
-    border-color: #321fdb !important;
+    background-color: #33A1E0 !important;
+    border-color: #33A1E0 !important;
 }
 
 .btn-primary:hover {
@@ -50,7 +50,7 @@ body {
 */
 .bg-green {
     /* background-color: #43a047; */
-    background-color: #894b9d;
+    background-color: #321fdb;
 }
 
 .bg-jumbotron {
@@ -145,7 +145,7 @@ body {
 }
 
 .btn-purple {
-    background-color: #894b9d !important;
+    background-color: #321fdb !important;
     color: white !important;
 }
 

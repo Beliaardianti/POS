@@ -64,5 +64,11 @@ class PermissionsTableSeeder extends Seeder
 
         //permissions profites
         Permission::create(['name' => 'profits.index', 'guard_name' => 'web']);
+
+        // approvals
+        Permission::create(['name' => 'approvals.view', 'guard_name' => 'web']);
+        Permission::create(['name' => 'approvals.approve', 'guard_name' => 'web']);
+        Permission::create(['name' => 'approvals.reject', 'guard_name' => 'web']);
+        Permission::create(['name' => 'approvals.request', 'guard_name' => 'web']);
     }
 }
