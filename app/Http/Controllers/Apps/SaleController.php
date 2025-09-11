@@ -21,7 +21,7 @@ class SaleController extends Controller
     {
         return Inertia::render('Apps/Sales/Index');
     }
-    
+
     /**
      * filter
      *
@@ -35,17 +35,22 @@ class SaleController extends Controller
             'end_date'    => 'required',
         ]);
 
-        //get data sales by range date
+        //get data sales by range date - EXCLUDE VOIDED
         $sales = Transaction::with('cashier', 'customer')
+            ->where('status', '!=', 'voided') // Pastikan ini ada
             ->whereDate('created_at', '>=', $request->start_date)
             ->whereDate('created_at', '<=', $request->end_date)
             ->get();
 
-        //get total sales by range date    
-        $total = Transaction::whereDate('created_at', '>=', $request->start_date)
+        // Debug: check isi $sales
+        // dd($sales->pluck('invoice', 'status')); // Tampilkan invoice dan status
+
+        //get total sales by range date - EXCLUDE VOIDED
+        $total = Transaction::where('status', '!=', 'voided') // TAMBAH INI
+            ->whereDate('created_at', '>=', $request->start_date)
             ->whereDate('created_at', '<=', $request->end_date)
             ->sum('grand_total');
-        
+
         return Inertia::render('Apps/Sales/Index', [
             'sales'    => $sales,
             'total'    => (int) $total
@@ -60,9 +65,9 @@ class SaleController extends Controller
      */
     public function export(Request $request)
     {
-        return Excel::download(new SalesExport($request->start_date, $request->end_date), 'sales : '.$request->start_date.' — '.$request->end_date.'.xlsx');
+        return Excel::download(new SalesExport($request->start_date, $request->end_date), 'sales : ' . $request->start_date . ' — ' . $request->end_date . '.xlsx');
     }
-    
+
     /**
      * pdf
      *
@@ -71,16 +76,23 @@ class SaleController extends Controller
      */
     public function pdf(Request $request)
     {
-        //get sales by range date
-        $sales = Transaction::with('cashier', 'customer')->whereDate('created_at', '>=', $request->start_date)->whereDate('created_at', '<=', $request->end_date)->get();
+        //get sales by range date - EXCLUDE VOIDED
+        $sales = Transaction::with('cashier', 'customer')
+            ->where('status', '!=', 'voided') // TAMBAH INI
+            ->whereDate('created_at', '>=', $request->start_date)
+            ->whereDate('created_at', '<=', $request->end_date)
+            ->get();
 
-        //get total sales by range daate
-        $total = Transaction::whereDate('created_at', '>=', $request->start_date)->whereDate('created_at', '<=', $request->end_date)->sum('grand_total');
+        //get total sales by range date - EXCLUDE VOIDED
+        $total = Transaction::where('status', '!=', 'voided') // TAMBAH INI
+            ->whereDate('created_at', '>=', $request->start_date)
+            ->whereDate('created_at', '<=', $request->end_date)
+            ->sum('grand_total');
 
         //load view PDF with data
         $pdf = PDF::loadView('exports.sales', compact('sales', 'total'));
 
         //return PDF for preview / download
-        return $pdf->download('sales : '.$request->start_date.' — '.$request->end_date.'.pdf');
+        return $pdf->download('sales : ' . $request->start_date . ' — ' . $request->end_date . '.pdf');
     }
 }

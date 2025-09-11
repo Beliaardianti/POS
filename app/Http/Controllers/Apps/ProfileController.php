@@ -16,7 +16,7 @@ class ProfileController extends Controller
     public function show()
     {
         return inertia('Apps/Profile/Show', [
-            'user' => auth()->user()
+            'profile' => $profile = auth()->user()
         ]);
     }
 

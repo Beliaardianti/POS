@@ -10,14 +10,21 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 class Transaction extends Model
 {
     use HasFactory;
-    
+
     /**
      * fillable
      *
      * @var array
      */
     protected $fillable = [
-        'cashier_id', 'customer_id', 'invoice', 'cash', 'change', 'discount', 'grand_total'
+        'cashier_id',
+        'customer_id',
+        'invoice',
+        'cash',
+        'change',
+        'discount',
+        'grand_total',
+        'status'  // TAMBAH INI - SATU BARIS AJA!
     ];
 
     /**
@@ -68,7 +75,29 @@ class Transaction extends Model
     protected function createdAt(): Attribute
     {
         return Attribute::make(
-            get: fn ($value) => Carbon::parse($value)->format('d-M-Y H:i:s'),
+            get: fn($value) => Carbon::parse($value)->format('d-M-Y H:i:s'),
         );
     }
+
+    // approval
+
+    // TAMBAH RELATIONSHIP APPROVAL - INI YANG KURANG
+    public function approvals()
+    {
+        return $this->morphMany(Approval::class, 'reference');
+    }
+
+    public function pendingApproval()
+    {
+        return $this->morphOne(Approval::class, 'reference')
+            ->where('status', 'pending');
+    }
+
+    // Status constants (optional)
+    const STATUS_COMPLETED = 'completed';
+    const STATUS_PENDING_APPROVAL = 'pending_approval';
+    const STATUS_APPROVED = 'approved';
+    const STATUS_REJECTED = 'rejected';
+    const STATUS_REFUNDED = 'refunded';
+    const STATUS_VOIDED = 'voided';
 }

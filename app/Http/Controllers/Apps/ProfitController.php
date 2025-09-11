@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Apps;
 
 use Inertia\Inertia;
 use App\Models\Profit;
+use App\Models\Transaction;
 use Illuminate\Http\Request;
 use App\Exports\ProfitsExport;
 use App\Http\Controllers\Controller;
@@ -35,11 +36,24 @@ class ProfitController extends Controller
             'end_date'    => 'required',
         ]);
 
-        //get data profits by range date
-        $profits = Profit::with('transaction')->whereDate('created_at', '>=', $request->start_date)->whereDate('created_at', '<=', $request->end_date)->get();
+        // Get data profits by range date - EXCLUDE VOIDED TRANSACTIONS
+        $profits = Profit::with(['transaction' => function ($query) {
+            $query->where('status', '!=', 'voided');
+        }])
+            ->whereHas('transaction', function ($query) use ($request) {
+                $query->where('status', '!=', 'voided')
+                    ->whereDate('created_at', '>=', $request->start_date)
+                    ->whereDate('created_at', '<=', $request->end_date);
+            })
+            ->get();
 
-        //get total profit by range date
-        $total = Profit::whereDate('created_at', '>=', $request->start_date)->whereDate('created_at', '<=', $request->end_date)->sum('total');
+        // Get total profit by range date - EXCLUDE VOIDED
+        $total = Profit::whereHas('transaction', function ($query) use ($request) {
+            $query->where('status', '!=', 'voided')
+                ->whereDate('created_at', '>=', $request->start_date)
+                ->whereDate('created_at', '<=', $request->end_date);
+        })
+            ->sum('total');
 
         return Inertia::render('Apps/Profits/Index', [
             'profits'   => $profits,
@@ -55,7 +69,10 @@ class ProfitController extends Controller
      */
     public function export(Request $request)
     {
-        return Excel::download(new ProfitsExport($request->start_date, $request->end_date), 'profits : '.$request->start_date.' — '.$request->end_date.'.xlsx');
+        return Excel::download(
+            new ProfitsExport($request->start_date, $request->end_date),
+            'profits : ' . $request->start_date . ' — ' . $request->end_date . '.xlsx'
+        );
     }
 
     /**
@@ -66,16 +83,29 @@ class ProfitController extends Controller
      */
     public function pdf(Request $request)
     {
-        //get data proftis by range date
-        $profits = Profit::with('transaction')->whereDate('created_at', '>=', $request->start_date)->whereDate('created_at', '<=', $request->end_date)->get();
+        // Get data profits by range date - EXCLUDE VOIDED
+        $profits = Profit::with(['transaction' => function ($query) {
+            $query->where('status', '!=', 'voided');
+        }])
+            ->whereHas('transaction', function ($query) use ($request) {
+                $query->where('status', '!=', 'voided')
+                    ->whereDate('created_at', '>=', $request->start_date)
+                    ->whereDate('created_at', '<=', $request->end_date);
+            })
+            ->get();
 
-        //get total profit by range date
-        $total = Profit::whereDate('created_at', '>=', $request->start_date)->whereDate('created_at', '<=', $request->end_date)->sum('total');
+        // Get total profit by range date - EXCLUDE VOIDED
+        $total = Profit::whereHas('transaction', function ($query) use ($request) {
+            $query->where('status', '!=', 'voided')
+                ->whereDate('created_at', '>=', $request->start_date)
+                ->whereDate('created_at', '<=', $request->end_date);
+        })
+            ->sum('total');
 
-        //load view PDF with data
+        // Load view PDF with data
         $pdf = PDF::loadView('exports.profits', compact('profits', 'total'));
 
-        //download PDF
-        return $pdf->download('profits : '.$request->start_date.' — '.$request->end_date.'.pdf');
+        // Download PDF
+        return $pdf->download('profits : ' . $request->start_date . ' — ' . $request->end_date . '.pdf');
     }
 }

@@ -27,51 +27,61 @@ class DashboardController extends Controller
         //week
         $week = Carbon::now()->subDays(7);
 
-        //chart sales 7 days
+        //chart sales 7 days - EXCLUDE VOIDED
         $chart_sales_week = DB::table('transactions')
             ->addSelect(DB::raw('DATE(created_at) as date, SUM(grand_total) as grand_total'))
             ->where('created_at', '>=', $week)
+            ->where('status', '!=', 'voided') // TAMBAH INI
             ->groupBy('date')
             ->get();
 
-        if(count($chart_sales_week)) {
+        if (count($chart_sales_week)) {
             foreach ($chart_sales_week as $result) {
                 $sales_date[]    = $result->date;
                 $grand_total[]   = (int)$result->grand_total;
             }
-        }else {
+        } else {
             $sales_date[]   = "";
             $grand_total[]  = "";
         }
-        
 
-        //count sales today
-        $count_sales_today = Transaction::whereDay('created_at', $day)->count();
+        //count sales today - EXCLUDE VOIDED
+        $count_sales_today = Transaction::whereDay('created_at', $day)
+            ->where('status', '!=', 'voided') // TAMBAH INI
+            ->count();
 
-        //sum sales today
-        $sum_sales_today = Transaction::whereDay('created_at', $day)->sum('grand_total');
+        //sum sales today - EXCLUDE VOIDED
+        $sum_sales_today = Transaction::whereDay('created_at', $day)
+            ->where('status', '!=', 'voided') // TAMBAH INI
+            ->sum('grand_total');
 
-        //sum profits today
-        $sum_profits_today = Profit::whereDay('created_at', $day)->sum('total');
+        //sum profits today - EXCLUDE VOIDED TRANSACTIONS
+        $sum_profits_today = Profit::whereHas('transaction', function ($query) use ($day) {
+            $query->where('status', '!=', 'voided')
+                ->whereDay('created_at', $day);
+        })
+            ->sum('total');
 
         //get product limit stock
         $products_limit_stock = Product::with('category')->where('stock', '<=', 10)->get();
 
-        //chart best selling product
+        //chart best selling product - EXCLUDE VOIDED
         $chart_best_products = DB::table('transaction_details')
             ->addSelect(DB::raw('products.title as title, SUM(transaction_details.qty) as total'))
             ->join('products', 'products.id', '=', 'transaction_details.product_id')
+            ->join('transactions', 'transactions.id', '=', 'transaction_details.transaction_id') // JOIN dengan transactions
+            ->where('transactions.status', '!=', 'voided') // EXCLUDE VOIDED
             ->groupBy('transaction_details.product_id')
             ->orderBy('total', 'DESC')
             ->limit(5)
             ->get();
 
-        if(count($chart_best_products)) {
+        if (count($chart_best_products)) {
             foreach ($chart_best_products as $data) {
                 $product[] = $data->title;
                 $total[]   = (int)$data->total;
             }
-        }else {
+        } else {
             $product[]   = "";
             $total[]  = "";
         }

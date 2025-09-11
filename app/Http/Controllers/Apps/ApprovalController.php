@@ -4,8 +4,11 @@ namespace App\Http\Controllers\Apps;
 
 use App\Models\Approval;
 use App\Models\Transaction;
+use App\Models\Product;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
+
 
 class ApprovalController extends Controller
 {
@@ -26,7 +29,7 @@ class ApprovalController extends Controller
             ->latest('requested_at')
             ->paginate(20);
 
-        return inertia('Apps/Approvals/Index', [  // TAMBAH Apps/
+        return inertia('Apps/Approvals/Index', [
             'approvals' => $approvals,
             'stats' => $this->getApprovalStats()
         ]);
@@ -47,7 +50,10 @@ class ApprovalController extends Controller
     }
 
     /**
-     * Approve the approval request
+     * Approve the approval request - DEBUG VERSION
+     */
+    /**
+     * Approve the approval request - FINAL FIX
      */
     public function approve(Request $request, Approval $approval)
     {
@@ -57,13 +63,66 @@ class ApprovalController extends Controller
             'reason' => 'nullable|string|max:500'
         ]);
 
-        $approval->approve(auth()->id(), $request->reason);
+        try {
+            // STEP 1: Manual update approval (bypass model method)
+            $approval->update([
+                'status' => 'approved',
+                'approved_by' => auth()->id(),
+                'approved_at' => now(),
+                'notes' => $request->reason
+            ]);
 
-        return back()->with('success', 'Approval request has been approved successfully.');
+            // STEP 2: Manual update transaction status
+            $transaction = Transaction::find($approval->reference_id);
+
+            if ($transaction && $approval->reference_type === 'transaction') {
+                if ($approval->type === 'void') {
+                    $transaction->update(['status' => 'voided']);
+
+                    // Kembalikan stok
+                    foreach ($transaction->details as $detail) {
+                        $product = Product::find($detail->product_id);
+                        if ($product) {
+                            $product->increment('stock', $detail->qty);
+                        }
+                    }
+                } elseif ($approval->type === 'refund') {
+                    $transaction->update(['status' => 'refunded']);
+
+                    // Kembalikan stok
+                    foreach ($transaction->details as $detail) {
+                        $product = Product::find($detail->product_id);
+                        if ($product) {
+                            $product->increment('stock', $detail->qty);
+                        }
+                    }
+                }
+
+                // Verify update berhasil
+                $updatedTransaction = Transaction::find($approval->reference_id);
+
+                \Log::info('Transaction status updated successfully', [
+                    'transaction_id' => $transaction->id,
+                    'old_status' => $transaction->getOriginal('status'),
+                    'new_status' => $updatedTransaction->status,
+                    'approval_type' => $approval->type
+                ]);
+            }
+
+            return back()->with('success', 'Approval request has been approved successfully. Transaction status updated to: ' . ($transaction->fresh()->status ?? 'unknown'));
+        } catch (\Exception $e) {
+            \Log::error('Approval failed', [
+                'approval_id' => $approval->id,
+                'error' => $e->getMessage(),
+                'line' => $e->getLine()
+            ]);
+
+            return back()->with('error', 'Approval failed: ' . $e->getMessage());
+        }
     }
 
     /**
-     * Reject the approval request
+     * Reject the approval request - UPDATED
      */
     public function reject(Request $request, Approval $approval)
     {
@@ -73,9 +132,30 @@ class ApprovalController extends Controller
             'reason' => 'required|string|max:500'
         ]);
 
-        $approval->reject(auth()->id(), $request->reason);
+        try {
+            // Manual update approval (bypass model method)
+            $approval->update([
+                'status' => 'rejected',
+                'approved_by' => auth()->id(),
+                'approved_at' => now(),
+                'notes' => $request->reason
+            ]);
 
-        return back()->with('success', 'Approval request has been rejected.');
+            // Reset transaction status ke completed
+            $transaction = Transaction::find($approval->reference_id);
+            if ($transaction && $approval->reference_type === 'transaction') {
+                $transaction->update(['status' => 'completed']);
+
+                \Log::info('Transaction status reset after rejection', [
+                    'transaction_id' => $transaction->id,
+                    'status' => 'completed'
+                ]);
+            }
+
+            return back()->with('success', 'Approval request has been rejected.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Rejection failed: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -106,7 +186,7 @@ class ApprovalController extends Controller
         Approval::requestRefund(
             $transaction->id,
             $request->reason,
-            $request->amount ?? $transaction->total
+            $request->amount ?? $transaction->grand_total
         );
 
         return back()->with('success', 'Refund approval request has been sent to owner.');
@@ -148,8 +228,8 @@ class ApprovalController extends Controller
 
         $discountData = [
             'discount_amount' => $request->discount_amount,
-            'original_total' => $transaction->total,
-            'new_total' => $transaction->total - $request->discount_amount
+            'original_total' => $transaction->grand_total,
+            'new_total' => $transaction->grand_total - $request->discount_amount
         ];
 
         Approval::requestLargeDiscount(
@@ -215,7 +295,6 @@ class ApprovalController extends Controller
      */
     public function testCreate()
     {
-        // Simple test method
         $approval = Approval::requestRefund(1, 'Testing approval system', 50000);
 
         return response()->json([

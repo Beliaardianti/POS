@@ -10,7 +10,7 @@ class SalesExport implements FromView
 {
     protected $start_date;
     protected $end_date;
-    
+
     /**
      * __construct
      *
@@ -23,7 +23,7 @@ class SalesExport implements FromView
         $this->start_date = $start_date;
         $this->end_date   = $end_date;
     }
-    
+
     /**
      * view
      *
@@ -35,5 +35,15 @@ class SalesExport implements FromView
             'sales' => Transaction::with('cashier', 'customer')->whereDate('created_at', '>=', $this->start_date)->whereDate('created_at', '<=', $this->end_date)->get(),
             'total' => Transaction::whereDate('created_at', '>=', $this->start_date)->whereDate('created_at', '<=', $this->end_date)->sum('grand_total')
         ]);
+    }
+
+
+    public function collection()
+    {
+        return Transaction::with('cashier', 'customer')
+            ->where('status', '!=', 'voided') // TAMBAH INI
+            ->whereDate('created_at', '>=', $this->start_date)
+            ->whereDate('created_at', '<=', $this->end_date)
+            ->get();
     }
 }

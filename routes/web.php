@@ -16,8 +16,14 @@ Route::prefix('apps')->group(function () {
 
         //route dashboard
         Route::get('dashboard', App\Http\Controllers\Apps\DashboardController::class)->name('apps.dashboard');
+        // Route untuk menampilkan profile (GET)
+        Route::get('/profile', [App\Http\Controllers\Apps\ProfileController::class, 'show'])->name('apps.profile.show');
 
-        //route permissions
+        // Route untuk update profile (PUT)
+        Route::put('/profile', [App\Http\Controllers\Apps\ProfileController::class, 'update'])->name('apps.profile.update');
+
+        // Route untuk update password (PUT)
+        Route::put('/profile/password', [App\Http\Controllers\Apps\ProfileController::class, 'updatePassword'])->name('apps.profile.password');
         Route::get('/permissions', \App\Http\Controllers\Apps\PermissionController::class)->name('apps.permissions.index')
             ->middleware('permission:permissions.index');
 
@@ -33,7 +39,12 @@ Route::prefix('apps')->group(function () {
         Route::resource('/categories', \App\Http\Controllers\Apps\CategoryController::class, ['as' => 'apps'])
             ->middleware('permission:categories.index|categories.create|categories.edit|categories.delete');
 
-        //route resource products
+        // PRODUCTS CUSTOM ROUTES - HARUS DI ATAS RESOURCE ROUTE
+        Route::get('/products/export', [\App\Http\Controllers\Apps\ProductController::class, 'export'])->name('apps.products.export');
+        Route::get('/products/low-stock', [\App\Http\Controllers\Apps\ProductController::class, 'getLowStockProducts'])->name('apps.products.lowstock');
+        Route::get('/products/expired', [\App\Http\Controllers\Apps\ProductController::class, 'getExpiredProducts'])->name('apps.products.expired');
+
+        // PRODUCTS RESOURCE ROUTE - HARUS DI BAWAH CUSTOM ROUTES
         Route::resource('/products', \App\Http\Controllers\Apps\ProductController::class, ['as' => 'apps'])
             ->middleware('permission:products.index|products.create|products.edit|products.delete');
 
@@ -106,4 +117,11 @@ Route::prefix('apps')->group(function () {
         Route::post('/discount', [\App\Http\Controllers\Apps\ApprovalController::class, 'requestDiscount'])->name('apps.approval.request.discount')
             ->middleware('permission:approvals.request');
     });
+
+    //route transaction list for staff
+    Route::get('/transactions/list', [\App\Http\Controllers\Apps\TransactionController::class, 'transactionList'])->name('apps.transactions.list');
+
+    //route request approval from transaction
+    Route::post('/transactions/request-refund', [\App\Http\Controllers\Apps\TransactionController::class, 'requestRefund'])->name('apps.transactions.request.refund');
+    Route::post('/transactions/request-void', [\App\Http\Controllers\Apps\TransactionController::class, 'requestVoid'])->name('apps.transactions.request.void');
 });

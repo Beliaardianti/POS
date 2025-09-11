@@ -5,6 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\User;
+use App\Models\Transaction;
+use App\Models\Product;
+use App\Models\Profit;
+use Illuminate\Support\Facades\DB;
+
 
 class Approval extends Model
 {
@@ -114,22 +120,36 @@ class Approval extends Model
             // Restore stock
             foreach ($transaction->details as $detail) {
                 $product = Product::find($detail->product_id);
-                $product->increment('stock', $detail->quantity);
+                if ($product) {
+                    $product->increment('stock', $detail->quantity);
+                }
             }
+
+            // Hapus profit records agar tidak masuk laporan
+            Profit::where('transaction_id', $transaction->id)->delete();
         }
     }
 
     private function processVoid()
     {
-        $transaction = Transaction::find($this->reference_id);
-        if ($transaction) {
-            $transaction->update(['status' => 'voided']);
+        try {
+            $transaction = Transaction::find($this->reference_id);
+            if ($transaction) {
+                \Log::info('Processing void for transaction', ['transaction_id' => $transaction->id]);
 
-            // Restore stock
-            foreach ($transaction->details as $detail) {
-                $product = Product::find($detail->product_id);
-                $product->increment('stock', $detail->quantity);
+                $transaction->update(['status' => 'voided']);
+                \Log::info('Transaction status updated to voided');
+
+                // Skip stock restoration untuk avoid error
+                // \Log::info('Skipping stock restoration to avoid increment error');
+
+                // Hapus profit records
+                $deletedProfits = Profit::where('transaction_id', $transaction->id)->delete();
+                \Log::info('Deleted profit records', ['count' => $deletedProfits]);
             }
+        } catch (\Exception $e) {
+            \Log::error('Error in processVoid', ['error' => $e->getMessage()]);
+            throw $e;
         }
     }
 
